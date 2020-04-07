@@ -13,8 +13,9 @@ import {
     withLatestFrom,
     concatAll, shareReplay
 } from 'rxjs/operators';
-import {merge, fromEvent, Observable, concat} from 'rxjs';
+import {merge, fromEvent, Observable, concat, forkJoin} from 'rxjs';
 import {Lesson} from '../model/lesson';
+import { createHttpObservable } from '../common/util';
 
 
 @Component({
@@ -24,6 +25,7 @@ import {Lesson} from '../model/lesson';
 })
 export class CourseComponent implements OnInit, AfterViewInit {
 
+    courseId: string;
 
     course$: Observable<Course>;
     lessons$: Observable<Lesson[]>;
@@ -38,17 +40,49 @@ export class CourseComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
 
-        const courseId = this.route.snapshot.params['id'];
+        this.courseId = this.route.snapshot.params['id'];
 
+        const course$ = createHttpObservable(`/api/courses/${this.courseId}`);
 
+        const lessons$ = this.loadLessons();
+
+        // forkJoin
+        // send multiple requests at the same time and emits the value when all Observables are completed,
+        // sending the last value before completion
+        forkJoin(course$, lessons$).pipe(
+            tap(([course, lessons]) => {
+
+                console.log(`course`, course);
+                console.log(`lessons`, lessons);
+
+            })
+        ).subscribe();
 
     }
 
     ngAfterViewInit() {
 
+        // switchMap
+        // If the Observable is not completed and another Observable emits a new value,
+        // it will unsubscribe to the old Observable and switch to the new Observalbe.
+        // If it gets new searchTerm while an http request was still ongoing,
+        // it will unsubscribe to the searchTerm and the http request will be canceled,
+        // then it will emit the new searchTerm http request and wait for it to be completed 
 
+        this.lessons$ = fromEvent<any>(this.input.nativeElement, `keyup`).pipe(
+            map(event => event.target.value),
+            startWith(''),
+            debounceTime(400),
+            distinctUntilChanged(),
+            switchMap(search => this.loadLessons(search))
+        )
 
+    }
 
+    loadLessons(search = ''): Observable<Lesson[]> {
+        return createHttpObservable(`/api/lessons?courseId=${this.courseId}&pageSize=100&filter=${search}`).pipe(
+            map(res => res[`payload`])
+        )
     }
 
 
