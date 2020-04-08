@@ -29,6 +29,8 @@ import { CourseDialogComponent } from './course-dialog/course-dialog.component';
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {MatMomentDateModule} from "@angular/material-moment-adapter";
 
+import { StoreService} from './common/store.service';
+
 @NgModule({
     declarations: [
         AppComponent,
@@ -63,7 +65,7 @@ import {MatMomentDateModule} from "@angular/material-moment-adapter";
         ReactiveFormsModule
     ],
     providers: [
-
+        StoreService
     ],
     bootstrap: [AppComponent],
     entryComponents: [CourseDialogComponent]
